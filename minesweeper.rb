@@ -7,21 +7,45 @@ class Field
     set_all_surr_bombs
   end
 
-  def add_bombs
-    bombs = Field.make_bombs
-    bombs.each { |(row, col)| @field[row][col].bomb = true }
+  def [](coord)
+    x, y = coord
+    @field[x][y]
   end
 
-  def make_move
+  def add_bombs
+    bombs = Field.make_bombs
+    bombs.each { |coord| @field[coord].bomb = true }
+  end
+
+  def make_move(action, coordinate)
     #modifies the squares in @field
     #find the neightbors if the square has zero bombs, and call make move on all of them
+    return false unless valid_move?(coordinate)
+
+    case action
+    when "f"
+      @field[coordinate].flagged = !@field[coordinate].flagged
+    when "r"
+      @field[coordinate].revealed = true
+      if @field[coordinate].bomb == true
+        puts "bomb; break"
+        break
+      end
+      if @field[coordinate].surr_bombs == 0
+        neighbor_coordinates = find_neighbors(coordinate)
+
+        neighbor_coordinates.each do |neighbor_coordinate|
+          next if @field[neighbor_coordinate].bomb
+          make_move("r", neighbor_coordinate)
+        end
+      end
+    end
   end
 
   def valid_move?(coordinate)
     #not valid if square off of field, or revealed, or flagged???
-    x, y = coordinate
     return false unless on_field?(coordinate)
-    return false if @field[x][y].revealed
+    return false if @field[coordinate].revealed
     true
   end
 
@@ -29,7 +53,7 @@ class Field
     #goes through all squares to make sure there are no unrevealed/flagged squares
     @field.each do |row|
       row_squares.each do |square|
-        return false if
+        return false if !square.correctly_identified
       end
     end
     true
@@ -55,17 +79,14 @@ class Field
 
     count = 0
     neighbors.each do |neighbor|
-      x, y = neighbor
-      count += 1 if @field[x][y].bomb
+      count += 1 if @field[neighbor].bomb
     end
     square.surr_mines = count
   end
 
   def find_neighbors(coordinate)
     #given square, returns arr of neighbors
-    neighbors = []
     shift = [[0,1],[0,-1],[1,0],[1,1],[1,-1],[-1,0],[-1,1],[-1,-1]]
-
     neighbors = shift.map {|(x, y)| [coordinate[0] + x, coordinate[1] + y]}
 
     neighbors.select {|coord| on_field?(coord)}
@@ -102,8 +123,10 @@ end
 class Square
   attr_accessor :flagged, :revealed, :bomb, :surr_bombs
 
-  def unrevealed_bomb
-    @bomb == true && @revealed == false
+  def correctly_identified
+    return true if (!@bomb && @revealed)
+    return true if (@bomb && @flagged)
+    false
   end
 end
 
