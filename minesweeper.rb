@@ -1,10 +1,34 @@
-#Mine
-
 class Field
   def initialize
     @field = Field.blank_field
+    @lost_game = false
     add_bombs
     set_all_surr_bombs
+  end
+
+  def play
+    #display boad, welcome to game, prompt for move, explain how to move
+    #get move, make move, check if game is over? if so, do something about it, otherwise get move
+    inital_msg
+
+    until game_over?
+      self.show
+      action, coordinate = Player.get_move
+      if valid_move?(coordinate)
+        make_move(action)
+      else
+        puts "Invalid move! Try again."
+      end
+    end
+
+    self.show_all #show vals for entire board incl bombs, etc
+
+    end_msg
+
+  end
+
+  def initial_message
+    puts "Welcome to Minesweeper! Get ready for the time of your life..."
   end
 
   def [](coord)
@@ -14,28 +38,31 @@ class Field
 
   def add_bombs
     bombs = Field.make_bombs
-    bombs.each { |coord| @field[coord].bomb = true }
+    bombs.each { |coord| self[coord].bomb = true }
   end
 
-  def make_move(action, coordinate)
-    #modifies the squares in @field
-    #find the neightbors if the square has zero bombs, and call make move on all of them
-    return false unless valid_move?(coordinate)
+  def end_msg
+    if @lost_game
+      puts "You lost! Try again."
+    else
+      puts "Congrats! You're the best. At winning Minesweeper. ...this time."
+    end
+  end
 
+  def make_move(action)
     case action
     when "f"
-      @field[coordinate].flagged = !@field[coordinate].flagged
+      self[coordinate].flagged = !self[coordinate].flagged
     when "r"
-      @field[coordinate].revealed = true
-      if @field[coordinate].bomb == true
-        puts "bomb; break"
-        break
+      self[coordinate].revealed = true
+      if self[coordinate].bomb == true
+         @lost_game = true
       end
-      if @field[coordinate].surr_bombs == 0
+      if self[coordinate].surr_bombs == 0
         neighbor_coordinates = find_neighbors(coordinate)
 
         neighbor_coordinates.each do |neighbor_coordinate|
-          next if @field[neighbor_coordinate].bomb
+          next if self[neighbor_coordinate].bomb
           make_move("r", neighbor_coordinate)
         end
       end
@@ -43,10 +70,18 @@ class Field
   end
 
   def valid_move?(coordinate)
-    #not valid if square off of field, or revealed, or flagged???
     return false unless on_field?(coordinate)
-    return false if @field[coordinate].revealed
+    return false if self[coordinate].revealed
     true
+  end
+
+  def game_over?
+    return lost? || won?
+  end
+
+  def lost?
+    return true if @lost_game
+    false
   end
 
   def won?
@@ -79,9 +114,9 @@ class Field
 
     count = 0
     neighbors.each do |neighbor|
-      count += 1 if @field[neighbor].bomb
+      count += 1 if self[neighbor].bomb
     end
-    square.surr_mines = count
+    square.surr_bombs = count
   end
 
   def find_neighbors(coordinate)
@@ -100,7 +135,7 @@ class Field
 
   def self.make_bombs
     bombs = []
-    until bomb.uniq.length == 10
+    until bombs.uniq.length == 10
       bombs << [rand(9), rand(9)]
     end
     bombs
@@ -129,6 +164,18 @@ class Square
     false
   end
 end
+
+class Player
+  def self.get_move
+    puts "Where would you like to make a move? Enter coordinates (e.g. 1,2)"
+    coordinate = gets.chomp.split(",")
+    puts "What would you like to do? Flag (f) or reveal (r)?"
+    action = gets.chomp
+    [action, coordinate]
+  end
+end
+
+
 
 
 
