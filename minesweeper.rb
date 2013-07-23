@@ -36,11 +36,13 @@ class Field
     return lost? || won?
   end
 
-  def initial_message
+  def initial_msg
+    puts ""
     puts "Welcome to Minesweeper! Get ready for the time of your life..."
+    puts ""
   end
 
-  def invalid_move_message
+  def invalid_move_msg
     puts "Invalid move! Try again."
   end
 
@@ -49,20 +51,23 @@ class Field
     false
   end
 
-  def make_move(action)
+  def make_move(action, coordinate)
     case action
     when "f"
       self[coordinate].flagged = !self[coordinate].flagged
     when "r"
       self[coordinate].revealed = true
+
+      return nil if self[coordinate].surr_bombs > 0
+
       if self[coordinate].bomb == true
          @lost_game = true
-      end
-      if self[coordinate].surr_bombs == 0
+      elsif self[coordinate].surr_bombs == 0
         neighbor_coordinates = find_neighbors(coordinate)
 
         neighbor_coordinates.each do |neighbor_coordinate|
           next if self[neighbor_coordinate].bomb
+          next if self[neighbor_coordinate].revealed
           make_move("r", neighbor_coordinate)
         end
       end
@@ -72,15 +77,15 @@ class Field
   def play
     #display boad, welcome to game, prompt for move, explain how to move
     #get move, make move, check if game is over? if so, do something about it, otherwise get move
-    inital_msg
+    initial_msg
 
     until game_over?
       self.show
       action, coordinate = Player.get_move
       if valid_move?(coordinate)
-        make_move(action)
+        make_move(action, coordinate)
       else
-        invalid_move_message
+        invalid_move_msg
       end
     end
 
@@ -112,16 +117,17 @@ class Field
 
   def show(all = false)
     #displays board
-    display = "  0 1 2 3 4 5 6 7 8\n"
+    display = "    0 1 2 3 4 5 6 7 8\n\n"
 
-      @field.each_with_index do |row, idx|
-        display << idx.to_s
-        row.each do |square|
-          display << square.display_value if !all
-          display << square.display_value_all if all
-        end
-        display << "\n"
+    @field.each_with_index do |row, idx|
+      display << "#{idx}  "
+      row.each do |square|
+        display << square.display_value if !all
+        display << square.display_value_all if all
       end
+      display << "\n"
+    end
+    puts display
   end
 
   def valid_move?(coordinate)
@@ -133,7 +139,7 @@ class Field
   def won?
     #goes through all squares to make sure there are no unrevealed/flagged squares
     @field.each do |row|
-      row_squares.each do |square|
+      row.each do |square|
         return false if !square.correctly_identified
       end
     end
@@ -172,6 +178,11 @@ end
 class Square
   attr_accessor :flagged, :revealed, :bomb, :surr_bombs
 
+  def initialize
+    flagged = false
+    revealed = false
+  end
+
   def correctly_identified
     return true if (!@bomb && @revealed)
     return true if (@bomb && @flagged)
@@ -192,10 +203,10 @@ class Square
   def display_value_all
     if flagged
       " F"
-    elsif revealed
-      surr_bombs == 0 ? "  " : " #{surr_bombs}"
     elsif bomb
       " *"
+    elsif revealed
+      surr_bombs == 0 ? "  " : " #{surr_bombs}"
     else
       " -"
     end
@@ -205,31 +216,16 @@ end
 
 class Player
   def self.get_move
-    puts "Where would you like to make a move? Enter coordinates (e.g. 1,2)"
-    coordinate = gets.chomp.split(",")
+    puts ""
+    puts "Where would you like to make a move? Enter location with 'row, column' coordinates (e.g. 1,2)"
+    coordinate = gets.chomp.split(",").map(&:lstrip).map(&:to_i)
     puts "What would you like to do? Flag (f) or reveal (r)?"
-    action = gets.chomp
+    action = gets.chomp.downcase
     [action, coordinate]
   end
 end
 
-
-
-  0 1 2 3 4 5 6 7 8
-0 - - - - - - - - -
-1
-2
-3
-4
-5
-6
-7
-8
-
-
-- - - - - - - - -
-* * 3 4 - F * * *
-
+Field.new.play
 
 
 
