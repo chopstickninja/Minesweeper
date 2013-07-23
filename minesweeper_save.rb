@@ -1,16 +1,14 @@
 require 'yaml'
 
 class Field
-  def initialize
-    @field = Field.blank_field
+  attr_accessor :field
+
+  def initialize(field = Field.blank_field)
+    @field = field
     @lost_game = false
     @save = false
     add_bombs
     set_all_surr_bombs
-  end
-
-  def field(field)
-    @field = field
   end
 
   def [](coord)
@@ -249,7 +247,7 @@ class Minesweeper
     if game
       game_yaml = File.read(game)
       old_field = YAML.load(game_yaml)
-      Field.new.field(old_field).play
+      Field.new(old_field).play
     else
       Field.new.play
     end
