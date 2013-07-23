@@ -6,31 +6,6 @@ class Field
     set_all_surr_bombs
   end
 
-  def play
-    #display boad, welcome to game, prompt for move, explain how to move
-    #get move, make move, check if game is over? if so, do something about it, otherwise get move
-    inital_msg
-
-    until game_over?
-      self.show
-      action, coordinate = Player.get_move
-      if valid_move?(coordinate)
-        make_move(action)
-      else
-        puts "Invalid move! Try again."
-      end
-    end
-
-    self.show_all #show vals for entire board incl bombs, etc
-
-    end_msg
-
-  end
-
-  def initial_message
-    puts "Welcome to Minesweeper! Get ready for the time of your life..."
-  end
-
   def [](coord)
     x, y = coord
     @field[x][y]
@@ -47,6 +22,31 @@ class Field
     else
       puts "Congrats! You're the best. At winning Minesweeper. ...this time."
     end
+  end
+
+  def find_neighbors(coordinate)
+    #given square, returns arr of neighbors
+    shift = [[0,1],[0,-1],[1,0],[1,1],[1,-1],[-1,0],[-1,1],[-1,-1]]
+    neighbors = shift.map {|(x, y)| [coordinate[0] + x, coordinate[1] + y]}
+
+    neighbors.select {|coord| on_field?(coord)}
+  end
+
+  def game_over?
+    return lost? || won?
+  end
+
+  def initial_message
+    puts "Welcome to Minesweeper! Get ready for the time of your life..."
+  end
+
+  def invalid_move_message
+    puts "Invalid move! Try again."
+  end
+
+  def lost?
+    return true if @lost_game
+    false
   end
 
   def make_move(action)
@@ -69,34 +69,25 @@ class Field
     end
   end
 
-  def valid_move?(coordinate)
-    return false unless on_field?(coordinate)
-    return false if self[coordinate].revealed
-    true
-  end
+  def play
+    #display boad, welcome to game, prompt for move, explain how to move
+    #get move, make move, check if game is over? if so, do something about it, otherwise get move
+    inital_msg
 
-  def game_over?
-    return lost? || won?
-  end
-
-  def lost?
-    return true if @lost_game
-    false
-  end
-
-  def won?
-    #goes through all squares to make sure there are no unrevealed/flagged squares
-    @field.each do |row|
-      row_squares.each do |square|
-        return false if !square.correctly_identified
+    until game_over?
+      self.show
+      action, coordinate = Player.get_move
+      if valid_move?(coordinate)
+        make_move(action)
+      else
+        invalid_move_message
       end
     end
-    true
-  end
 
-  def show
-    #displays board
-    @field.dup.each { |row| puts row}
+    self.show(all = true) #show vals for entire board incl bombs, etc
+
+    end_msg
+
   end
 
   def set_all_surr_bombs
@@ -119,13 +110,36 @@ class Field
     square.surr_bombs = count
   end
 
-  def find_neighbors(coordinate)
-    #given square, returns arr of neighbors
-    shift = [[0,1],[0,-1],[1,0],[1,1],[1,-1],[-1,0],[-1,1],[-1,-1]]
-    neighbors = shift.map {|(x, y)| [coordinate[0] + x, coordinate[1] + y]}
+  def show(all = false)
+    #displays board
+    display = "  0 1 2 3 4 5 6 7 8\n"
 
-    neighbors.select {|coord| on_field?(coord)}
+      @field.each_with_index do |row, idx|
+        display << idx.to_s
+        row.each do |square|
+          display << square.display_value if !all
+          display << square.display_value_all if all
+        end
+        display << "\n"
+      end
   end
+
+  def valid_move?(coordinate)
+    return false unless on_field?(coordinate)
+    return false if self[coordinate].revealed
+    true
+  end
+
+  def won?
+    #goes through all squares to make sure there are no unrevealed/flagged squares
+    @field.each do |row|
+      row_squares.each do |square|
+        return false if !square.correctly_identified
+      end
+    end
+    true
+  end
+
 
   private
   def on_field?(coordinate)
@@ -163,6 +177,30 @@ class Square
     return true if (@bomb && @flagged)
     false
   end
+
+  def display_value
+    if flagged
+      " F"
+    elsif revealed
+      surr_bombs == 0 ? "  " : " #{surr_bombs}"
+    else
+      " -"
+    end
+    #if revealed, dipslay surr_bombs (" " if this is 0). If flagged, F.
+  end
+
+  def display_value_all
+    if flagged
+      " F"
+    elsif revealed
+      surr_bombs == 0 ? "  " : " #{surr_bombs}"
+    elsif bomb
+      " *"
+    else
+      " -"
+    end
+  end
+
 end
 
 class Player
@@ -174,6 +212,24 @@ class Player
     [action, coordinate]
   end
 end
+
+
+
+  0 1 2 3 4 5 6 7 8
+0 - - - - - - - - -
+1
+2
+3
+4
+5
+6
+7
+8
+
+
+- - - - - - - - -
+* * 3 4 - F * * *
+
 
 
 
