@@ -1,9 +1,16 @@
+require 'yaml'
+
 class Field
   def initialize
     @field = Field.blank_field
     @lost_game = false
+    @save = false
     add_bombs
     set_all_surr_bombs
+  end
+
+  def field(field)
+    @field = field
   end
 
   def [](coord)
@@ -19,6 +26,8 @@ class Field
   def end_msg
     if @lost_game
       puts "You lost! Try again."
+    elsif @save
+      puts "Thanks for saving your game. Come back soon!"
     else
       puts "Congrats! You're the best. At winning Minesweeper. ...this time."
     end
@@ -36,12 +45,6 @@ class Field
     return lost? || won?
   end
 
-  def initial_msg
-    puts ""
-    puts "Welcome to Minesweeper! Get ready for the time of your life..."
-    puts ""
-  end
-
   def invalid_move_msg
     puts "Invalid move! Try again."
   end
@@ -57,7 +60,6 @@ class Field
       self[coordinate].flagged = !self[coordinate].flagged
     when "r"
       self[coordinate].revealed = true
-
       return nil if self[coordinate].surr_bombs > 0
 
       if self[coordinate].bomb == true
@@ -77,20 +79,32 @@ class Field
   def play
     #display boad, welcome to game, prompt for move, explain how to move
     #get move, make move, check if game is over? if so, do something about it, otherwise get move
-    initial_msg
-
-    until game_over?
+    until game_over? || @save
       self.show
       action, coordinate = Player.get_move
-      if valid_move?(coordinate)
+      if want_to_save?(action, coordinate)
+        save_game
+      elsif valid_move?(coordinate)
         make_move(action, coordinate)
       else
         invalid_move_msg
       end
     end
 
-    self.show(all = true) #show vals for entire board incl bombs, etc
+    self.show(all = true) unless @save #show vals for entire board incl bombs, etc
     end_msg
+  end
+
+  def save_game
+    save = @field.to_yaml
+    File.open('Minesweeper_save_file.txt', 'w') do |f|
+      f.puts save
+    end
+    @save = true
+  end
+
+  def want_to_save?(action, coordinate)
+    (action == "s") || (coordinate == "s")
   end
 
   def set_all_surr_bombs
@@ -216,16 +230,50 @@ class Player
   def self.get_move
     puts ""
     puts "Where would you like to make a move? Enter location with 'row, column' coordinates (e.g. 1,2)"
-    coordinate = gets.chomp.split(",").map(&:lstrip).map(&:to_i)
+    coordinate = gets.chomp.split(",")
+    if coordinate[0] == "s"
+      coordinate = "s"
+    else
+      coordinate = coordinate.map(&:lstrip).map(&:to_i)
+    end
     puts "What would you like to do? Flag (f) or reveal (r)?"
     action = gets.chomp.downcase
     [action, coordinate]
   end
 end
 
-Field.new.play
+class Minesweeper
+  def play
+    initial_msg
+    game = game_type
+    if game
+      game_yaml = File.read(game)
+      old_field = YAML.load(game_yaml)
+      Field.new.field(old_field).play
+    else
+      Field.new.play
+    end
+  end
 
+  def initial_msg
+    puts ""
+    puts "Welcome to Minesweeper! Enter 's' at any point to save. Get ready for the time of your life..."
+    puts ""
+  end
 
+  def game_type
+    puts "Enter 'n' for new game or 'l' to load a game from disk."
+    new_game = gets.downcase.chomp
+    return false if new_game == "n"
+    puts "Please type the file that has the saved game."
+    game = gets.chomp
+    game
+  end
+end
+
+Minesweeper.new.play
+
+#Field.new.play
 
 
 
