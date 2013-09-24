@@ -1,4 +1,4 @@
-app_academy
+Minesweeper
 ===========
 
-App Academy Work
+Command-line minesweeper in Ruby
