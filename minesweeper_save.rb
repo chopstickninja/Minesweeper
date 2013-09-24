@@ -270,13 +270,3 @@ class Minesweeper
 end
 
 Minesweeper.new.play
-
-#Field.new.play
-
-
-
-
-
-
-
-
